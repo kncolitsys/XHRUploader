@@ -1,0 +1,93 @@
+<html>
+	<head>
+		<script type="text/javascript">
+			/**
+			 * Lets us know if the web browser supports the high tech JS goodies necessary for upload progress
+			 */
+			function supportAjaxUploadWithProgress() {
+				return supportFileAPI() && supportAjaxUploadProgressEvents();
+				
+				function supportFileAPI() {
+					var fi = document.createElement('INPUT');
+					fi.type = 'file';
+					return 'files' in fi;
+				};
+				
+				function supportAjaxUploadProgressEvents() {
+					var xhr = new XMLHttpRequest();
+					return !! (xhr && ('upload' in xhr) && ('onprogress' in xhr.upload));
+				};
+			}
+
+
+			function sendForm() {
+				if (!supportAjaxUploadWithProgress()) {
+					alert("Browser does not support upload progress meters.");
+					return;
+				}
+				
+				// Organize the file we're uploading
+				console.log("Here's the file we will be uploading...");
+				var fileInput = document.getElementById('the-file');
+				console.log(fileInput.files); // A FileList with all selected files
+				var file = fileInput.files[0];
+				console.log(file.fileName); // "my-holiday-photo.jpg"
+				console.log(file.size); // 1282632
+				console.log(file.type); // image/jpeg
+
+
+				// Setup our data to be posted
+				
+				// Setup the XHR
+				var req = new XMLHttpRequest();
+				// Event listeners
+				req.upload.addEventListener("progress", updateProgress, false);
+				req.upload.addEventListener("load", transferComplete, false);
+				req.upload.addEventListener("error", transferFailed, false);
+				req.upload.addEventListener("abort", transferCanceled, false);
+
+				// Begin the XHR operations
+				req.open("POST", "/uploaderTarget.cfm", true);
+				req.setRequestHeader("X-File-Name", file.name);
+				req.setRequestHeader("Content-Type", "application/octet-stream");
+				console.log("Request has been created and is ready to begin the upload.");
+				console.log(req);
+				console.log("Beginning upload...");
+				req.send(file);
+			}
+
+			// progress on transfers from the server to the client (downloads)
+			function updateProgress(evt) {
+				console.log(evt);
+				if (evt.lengthComputable) {
+					var percentComplete = Math.round((evt.loaded / evt.total) * 100);
+					document.getElementById("output").innerHTML = "Upload progress: " + percentComplete + "%";
+				} else {
+					// Unable to compute progress information since the total size is unknown
+					console.log("Received XMLHttpRequest progress update, but with no computable metrics");
+				}
+			}
+			
+			function transferComplete(evt) {
+			  console.log("The transfer is complete.");
+			  document.getElementById("output").innerHTML = "Upload progress: 100%";
+			}
+			
+			function transferFailed(evt) {
+			  console.error("An error occurred while transferring the file.");
+			}
+			
+			function transferCanceled(evt) {
+			  console.warn("The transfer has been canceled by the user.");
+			}
+		</script>
+	</head>
+	<body>
+		<form enctype="multipart/form-data" method="post" name="fileinfo" id="fileinfo">
+			<label>File to stash:</label>
+			<input id="the-file" type="file" name="file" required multiple>
+		</form>
+		<div id="output"></div>
+		<button onclick="javascript:sendForm();">Upload File</button>
+	</body>
+</html>
